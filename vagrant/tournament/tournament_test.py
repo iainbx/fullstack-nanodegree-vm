@@ -124,6 +124,36 @@ def testPairings():
             "After one match, players with one win should be paired.")
     print "8. After one match, players with one win are paired."
 
+def testTournament():
+    deleteMatches()
+    deletePlayers()
+    registerPlayer("Kirk")
+    registerPlayer("Spock")
+    registerPlayer("McCoy")
+    registerPlayer("Scotty")
+    
+    for x in range(2):
+        pairings = swissPairings()
+        if len(pairings) != 2:
+            raise ValueError(
+                "For four players, swissPairings should return two pairs.")
+        [(pid1, pname1, pid2, pname2), (pid3, pname3, pid4, pname4)] = pairings
+        reportMatch(pid1, pid2)
+        reportMatch(pid3, pid4)
+    
+    standings = playerStandings()
+    
+    for i, (id, name, wins, matches) in enumerate(standings):
+        if matches != 2:
+            raise ValueError("Each player should have 2 matches recorded.")
+        if i == 0 and wins != 2:
+            raise ValueError("tournament winner should have 2 wins.")
+        elif i == len(standings) -1 and wins != 0:
+            raise ValueError("Last place should have no wins.")
+        elif i > 0 and i < len(standings) -1 and wins != 1:
+            raise ValueError("Middle rankings should have 1 win.")
+    
+    print "9. After a tournament, player wins and matches are correct."
 
 if __name__ == '__main__':
     testDeleteMatches()
@@ -134,6 +164,7 @@ if __name__ == '__main__':
     testStandingsBeforeMatches()
     testReportMatches()
     testPairings()
+    testTournament()
     print "Success!  All tests pass!"
 
 
