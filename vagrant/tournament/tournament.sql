@@ -6,11 +6,13 @@ DROP DATABASE IF EXISTS tournament;
 CREATE DATABASE tournament;
 \c tournament;
 
+
 -- Create players table
 CREATE TABLE players (
 	id serial PRIMARY KEY,
 	name text
 );
+
 
 -- Create matches table
 CREATE TABLE matches (
@@ -20,13 +22,15 @@ CREATE TABLE matches (
 	PRIMARY KEY (player1, player2)
 );
 
+
 -- Create player win count view
 CREATE VIEW player_wins AS
 	SELECT players.id, players.name, COUNT(matches.winner) AS wins
 	FROM players 
 	LEFT OUTER JOIN matches ON players.id = matches.winner
 	GROUP BY players.id;
-	
+
+
 -- Create player match count view
 CREATE VIEW player_matches AS
 	SELECT players.id, players.name, COUNT(matches.player1 + matches.player2) AS played
@@ -34,12 +38,24 @@ CREATE VIEW player_matches AS
 	LEFT OUTER JOIN matches ON players.id = matches.player1 OR players.id = matches.player2
 	GROUP BY players.id;
 
+
+-- Create player bye count view
+-- A player bye is recorded in the matches table as player = player1 = player2 = winner
+CREATE VIEW player_byes AS
+	SELECT players.id, players.name, COUNT(matches.player1) AS byes
+	FROM players 
+	LEFT OUTER JOIN matches ON players.id = matches.player1 AND players.id = matches.player2
+	GROUP BY players.id;
+
+
 -- Create player standings view
 CREATE VIEW standings AS
-	SELECT players.id, players.name, player_wins.wins, player_matches.played
+	SELECT players.id, players.name, player_wins.wins, player_matches.played, player_byes.byes
 	FROM players 
 	JOIN player_wins ON players.id = player_wins.id
-	JOIN player_matches ON players.id = player_matches.id;
+	JOIN player_matches ON players.id = player_matches.id
+	JOIN player_byes ON players.id = player_byes.id;
+
 
 -- Create possible pairings view
 -- Only list pairings that have not already played each other

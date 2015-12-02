@@ -19,6 +19,7 @@ def deleteMatches():
     conn.commit()
     conn.close()
 
+
 def deletePlayers():
     """Remove all the player records from the database."""
     conn = connect()
@@ -36,6 +37,7 @@ def countPlayers():
     row = c.fetchone()
     conn.close()
     return row[0]
+
 
 def registerPlayer(name):
     """Adds a player to the tournament database.
@@ -60,18 +62,19 @@ def playerStandings():
     tied for first place if there is currently a tie.
 
     Returns:
-      A list of tuples, each of which contains (id, name, wins, matches):
+      A list of tuples, each of which contains (id, name, wins, matches, byes):
         id: the player's unique id (assigned by the database)
         name: the player's full name (as registered)
         wins: the number of matches the player has won
         matches: the number of matches the player has played
+        byes: the number of byes the player was given
     """
     conn = connect()
     c = conn.cursor()
-    c.execute("SELECT * FROM standings ORDER BY wins DESC;")
-    rows = c.fetchall()
+    c.execute("SELECT id, name, wins, played, byes FROM standings ORDER BY wins DESC;")
+    standings = c.fetchall()
     conn.close()
-    return rows
+    return standings
 
 
 def reportMatch(winner, loser):
@@ -103,6 +106,15 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
+    # create list for pairings
+    pairs = []
+    
+    # if uneven number of players, give lowest ranked player that has not had a bye, a bye
+    if countPlayers() % 2 != 0:
+        pair = getByePairing()
+        if pair:
+            pairs.append(pair)
+        
     # get a list of possible pairings from the possible_pairings view, and sort by wins
     conn = connect()
     c = conn.cursor()
@@ -110,9 +122,6 @@ def swissPairings():
     possible_pairs = c.fetchall()
     conn.close()
    
-    # create list for pairings
-    pairs = []
-    
     # add pairs to list, only adding each player once
     for (id1, name1, id2, name2) in possible_pairs:
         add_pair = True
@@ -125,4 +134,24 @@ def swissPairings():
             pairs.append((id1, name1, id2, name2))
         
     return pairs
+
+
+def getByePairing():
+    """
+    Select lowest ranking player, that has not had a bye, for a bye
+    
+    Returns:
+    A tuple for a bye pairing (id1, name1, id2, name2)
+    where id1 = id2 and name1 = name2
+    """
+    conn = connect()
+    c = conn.cursor()
+    c.execute("SELECT id, name FROM standings WHERE byes = 0 ORDER BY wins ASC LIMIT 1;")
+    player = c.fetchone()
+    conn.close()
+    if len(player) == 2:
+        return (player[0], player[1], player[0], player[1])
+    else:
+        return None
+
 
