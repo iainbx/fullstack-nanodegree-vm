@@ -66,27 +66,29 @@ def playerStandings():
         id: the player's unique id (assigned by the database)
         name: the player's full name (as registered)
         wins: the number of matches the player has won
+        draws: the number of matches the player has drawn
         matches: the number of matches the player has played
         byes: the number of byes the player was given
     """
     conn = connect()
     c = conn.cursor()
-    c.execute("SELECT id, name, wins, played, byes FROM standings ORDER BY wins DESC;")
+    c.execute("SELECT id, name, wins, draws, played, byes FROM standings ORDER BY wins DESC;")
     standings = c.fetchall()
     conn.close()
     return standings
 
 
-def reportMatch(winner, loser):
+def reportMatch(player1, player2, winner=None):
     """Records the outcome of a single match between two players.
 
     Args:
-      winner:  the id number of the player who won
-      loser:  the id number of the player who lost
+      player1:  the id number of the player 1
+      player2:  the id number of the player 2
+      winner:   the id number of the player who won, or None for a draw
     """
     conn = connect()
     c = conn.cursor()
-    c.execute("INSERT INTO matches (player1,player2,winner) VALUES (%s,%s,%s);", (winner,loser,winner))
+    c.execute("INSERT INTO matches (player1,player2,winner) VALUES (%s,%s,%s);", (player1, player2, winner))
     conn.commit()
     conn.close()
 
@@ -137,12 +139,11 @@ def swissPairings():
 
 
 def getByePairing():
-    """
-    Select lowest ranking player, that has not had a bye, for a bye
+    """Select lowest ranking player, that has not had a bye, for a bye
     
     Returns:
-    A tuple for a bye pairing (id1, name1, id2, name2)
-    where id1 = id2 and name1 = name2
+      A tuple for a bye pairing (id1, name1, id2, name2)
+      where id1 = id2 and name1 = name2
     """
     conn = connect()
     c = conn.cursor()

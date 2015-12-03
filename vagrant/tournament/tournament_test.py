@@ -68,9 +68,9 @@ def testStandingsBeforeMatches():
                          "they have played any matches.")
     elif len(standings) > 2:
         raise ValueError("Only registered players should appear in standings.")
-    if len(standings[0]) != 5:
-        raise ValueError("Each playerStandings row should have 5 columns.")
-    [(id1, name1, wins1, matches1, byes1), (id2, name2, wins2, matches2, byes2)] = standings
+    if len(standings[0]) != 6:
+        raise ValueError("Each playerStandings row should have 6 columns.")
+    [(id1, name1, wins1, draws, matches1, byes1), (id2, name2, wins2, draws, matches2, byes2)] = standings
     if matches1 != 0 or matches2 != 0 or wins1 != 0 or wins2 != 0:
         raise ValueError(
             "Newly registered players should have no matches or wins.")
@@ -89,10 +89,10 @@ def testReportMatches():
     registerPlayer("Diane Grant")
     standings = playerStandings()
     [id1, id2, id3, id4] = [row[0] for row in standings]
-    reportMatch(id1, id2)
-    reportMatch(id3, id4)
+    reportMatch(id1, id2, id1)
+    reportMatch(id3, id4, id3)
     standings = playerStandings()
-    for (i, n, w, m, b) in standings:
+    for (i, n, w, d, m, b) in standings:
         if m != 1:
             raise ValueError("Each player should have one match recorded.")
         if i in (id1, id3) and w != 1:
@@ -111,8 +111,8 @@ def testPairings():
     registerPlayer("Pinkie Pie")
     standings = playerStandings()
     [id1, id2, id3, id4] = [row[0] for row in standings]
-    reportMatch(id1, id2)
-    reportMatch(id3, id4)
+    reportMatch(id1, id2, id1)
+    reportMatch(id3, id4, id3)
     pairings = swissPairings()
     if len(pairings) != 2:
         raise ValueError(
@@ -124,6 +124,7 @@ def testPairings():
         raise ValueError(
             "After one match, players with one win should be paired.")
     print "8. After one match, players with one win are paired."
+
 
 def testByes():
     deleteMatches()
@@ -141,18 +142,37 @@ def testByes():
             "No bye was assigned by swissPairings in 3 player tournament.")
     print "9. Bye was assigined in 3 player tournament."
 
+def testDraws():
+    deleteMatches()
+    deletePlayers()
+    registerPlayer("Kirk")
+    registerPlayer("Spock")
+    registerPlayer("McCoy")
+    registerPlayer("Scotty")
+    pairings = swissPairings()
+    for (id1, name1, id2, name2) in pairings:
+        reportMatch(id1, id2)
+    standings = playerStandings()
+    for (id, name, wins, draws, matches, byes) in standings:
+        if draws != 1:
+            raise ValueError("Each player should have 1 draw recorded.")
+    print "10. After reporting drawn matches, player standings shows draws."
+
 
 def test3PlayerTournament():
     testTournament(["Kirk", "Spock", "McCoy"])
-    print "10. After a 3 player tournament, player wins and matches are correct."
+    print "11. After a 3 player tournament, player wins and matches are correct."
+
 
 def test4PlayerTournament():
     testTournament(["Kirk", "Spock", "McCoy", "Scotty"])
-    print "11. After a 4 player tournament, player wins and matches are correct."
+    print "12. After a 4 player tournament, player wins and matches are correct."
+
 
 def test5PlayerTournament():
     testTournament(["Kirk", "Spock", "McCoy", "Scotty", "Sulu"])
-    print "12. After a 5 player tournament, player wins and matches are correct."
+    print "13. After a 5 player tournament, player wins and matches are correct."
+
 
 def testTournament(players):
     deleteMatches()
@@ -161,7 +181,7 @@ def testTournament(players):
     rounds_played = playTournament(players) 
     standings = playerStandings()
     
-    for i, (id, name, wins, matches, byes) in enumerate(standings):
+    for i, (id, name, wins, draws, matches, byes) in enumerate(standings):
         if matches != rounds_played:
             raise ValueError("Each player should have %s matches recorded.", rounds_played)
         if i == 0 and wins != rounds_played:
@@ -177,7 +197,7 @@ def testTournament(players):
 
 
 def playTournament(players):
-    """Play a tournament."""
+    """Play a complete tournament."""
     for player in players:
         registerPlayer(player)
         
@@ -192,7 +212,7 @@ def playRound():
     """Play a single round of a tournament."""
     pairings = swissPairings()
     for (id1, name1, id2, name2) in pairings:
-        reportMatch(id1, id2)
+        reportMatch(id1, id2, id1)
 
 
 if __name__ == '__main__':
@@ -205,6 +225,7 @@ if __name__ == '__main__':
     testReportMatches()
     testPairings()
     testByes()
+    testDraws()
     test3PlayerTournament()
     test4PlayerTournament()
     test5PlayerTournament()
