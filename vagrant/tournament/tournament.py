@@ -39,6 +39,16 @@ def countPlayers():
     return row[0]
 
 
+def countMatches():
+    """Returns the number of matches played."""
+    conn = connect()
+    c = conn.cursor()
+    c.execute("SELECT COUNT(player1) FROM matches;")
+    row = c.fetchone()
+    conn.close()
+    return row[0]
+
+
 def registerPlayer(name):
     """Adds a player to the tournament database.
   
@@ -56,23 +66,29 @@ def registerPlayer(name):
 
 
 def playerStandings():
-    """Returns a list of the players and their win records, sorted by wins.
+    """Returns a list of the players and their win records, sorted by rank and opponent wins.
 
     The first entry in the list should be the player in first place, or a player
     tied for first place if there is currently a tie.
 
     Returns:
-      A list of tuples, each of which contains (id, name, wins, matches, byes):
+      A list of tuples, each of which contains 
+        (id, name, wins, draws, played, byes, opponent_wins, rank):
         id: the player's unique id (assigned by the database)
         name: the player's full name (as registered)
         wins: the number of matches the player has won
         draws: the number of matches the player has drawn
-        matches: the number of matches the player has played
+        played: the number of matches the player has played
         byes: the number of byes the player was given
+        opponent_wins: the number of matches the players opponents have won
+        rank: the ranking of the player = played - wins - draws/2
     """
     conn = connect()
     c = conn.cursor()
-    c.execute("SELECT id, name, wins, draws, played, byes FROM standings ORDER BY wins DESC;")
+    sql = """SELECT id, name, wins, draws, opponent_wins, played, byes, rank
+                FROM standings ORDER BY rank, opponent_wins DESC;"""
+    
+    c.execute(sql)
     standings = c.fetchall()
     conn.close()
     return standings
@@ -117,10 +133,10 @@ def swissPairings():
         if pair:
             pairs.append(pair)
         
-    # get a list of possible pairings from the possible_pairings view, and sort by wins
+    # get a list of possible pairings from the possible_pairings view, and sort by rank
     conn = connect()
     c = conn.cursor()
-    c.execute("SELECT id1, name1, id2, name2 FROM possible_pairings	ORDER BY wins1 DESC, wins2 DESC;")
+    c.execute("SELECT id1, name1, id2, name2 FROM possible_pairings	ORDER BY rank1, rank2;")
     possible_pairs = c.fetchall()
     conn.close()
    
@@ -147,7 +163,7 @@ def getByePairing():
     """
     conn = connect()
     c = conn.cursor()
-    c.execute("SELECT id, name FROM standings WHERE byes = 0 ORDER BY wins ASC LIMIT 1;")
+    c.execute("SELECT id, name FROM standings WHERE byes = 0 ORDER BY rank DESC LIMIT 1;")
     player = c.fetchone()
     conn.close()
     if len(player) == 2:
