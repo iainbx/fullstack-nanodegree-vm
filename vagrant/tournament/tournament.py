@@ -3,6 +3,8 @@
 # tournament.py -- implementation of a Swiss-system tournament
 #
 
+
+import math
 import psycopg2
 
 
@@ -127,48 +129,64 @@ def swissPairings():
     # create list for pairings
     pairs = []
     
-    # if uneven number of players, give lowest ranked player that has not had a bye, a bye
-    if countPlayers() % 2 != 0:
-        pair = getByePairing()
-        if pair:
-            pairs.append(pair)
-        
+    player_count = countPlayers()
+   
+    # if odd number of players, get a list of possible bye players, from which to award a bye
+    if player_count % 2 != 0:
+        possible_bye_players = possibleByePlayers()
+
     # get a list of possible pairings from the possible_pairings view, and sort by rank
+    possible_pairs = possiblePairings()
+
+    # need to loop because 1st pairing attempt may fail when byes are involved.
+    # may need to try setting different players as the bye player to get a complete set of pairings.
+    while len(pairs) < int(math.ceil(float(player_count)/2)):
+        # clear list of pairings
+        del pairs[:]
+        
+        # add lowest ranked possible bye player, if we have an odd number of players
+        if player_count % 2 != 0:
+            bye_player = possible_bye_players.pop()
+            if bye_player:
+                pairs.append((bye_player[0],bye_player[1],bye_player[0],bye_player[1]))
+    
+        # add pairs to list, only adding each player once
+        for (id1, name1, id2, name2) in possible_pairs:
+            add_pair = True
+            for pair in pairs:
+                if id1 in (pair[0], pair[2]) or id2 in (pair[0], pair[2]):
+                    # one of the players in the pair is already paired with another player
+                    add_pair = False
+                    break
+            if add_pair:
+                pairs.append((id1, name1, id2, name2))
+        
+    return pairs
+
+
+def possibleByePlayers():
+    """Get the list of players that have not had a bye.
+
+    Returns:
+      A list of tuples of players (id, name) ordered by rank.
+    """
+    conn = connect()
+    c = conn.cursor()
+    c.execute("SELECT id, name FROM standings WHERE byes = 0 ORDER BY rank;")
+    possible_bye_players = c.fetchall()
+    conn.close()
+    return possible_bye_players
+
+
+def possiblePairings():
+    """Get the list of possible pairings for a round.
+
+    Returns:
+      A list of tuples of player pairings (id1, name1, id2, name2) ordered by rank.
+    """
     conn = connect()
     c = conn.cursor()
     c.execute("SELECT id1, name1, id2, name2 FROM possible_pairings	ORDER BY rank1, rank2;")
     possible_pairs = c.fetchall()
     conn.close()
-   
-    # add pairs to list, only adding each player once
-    for (id1, name1, id2, name2) in possible_pairs:
-        add_pair = True
-        for pair in pairs:
-            if id1 in (pair[0], pair[2]) or id2 in (pair[0], pair[2]):
-                # one of the players in the pair is already paired with another player
-                add_pair = False
-                break
-        if add_pair:
-            pairs.append((id1, name1, id2, name2))
-        
-    return pairs
-
-
-def getByePairing():
-    """Select lowest ranking player, that has not had a bye, for a bye
-    
-    Returns:
-      A tuple for a bye pairing (id1, name1, id2, name2)
-      where id1 = id2 and name1 = name2
-    """
-    conn = connect()
-    c = conn.cursor()
-    c.execute("SELECT id, name FROM standings WHERE byes = 0 ORDER BY rank DESC LIMIT 1;")
-    player = c.fetchone()
-    conn.close()
-    if len(player) == 2:
-        return (player[0], player[1], player[0], player[1])
-    else:
-        return None
-
-
+    return possible_pairs

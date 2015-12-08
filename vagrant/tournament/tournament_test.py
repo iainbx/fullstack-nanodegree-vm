@@ -177,38 +177,45 @@ def testOpponentWins():
 
 
 def test3PlayerTournament():
-    testTournament(["Kirk", "Spock", "McCoy"])
+    testTournament(3)
     print "12. After a 3 player tournament, player wins and matches are correct."
 
 
 def test4PlayerTournament():
-    testTournament(["Kirk", "Spock", "McCoy", "Scotty"])
+    testTournament(4)
     print "13. After a 4 player tournament, player wins and matches are correct."
 
 
 def test5PlayerTournament():
-    testTournament(["Kirk", "Spock", "McCoy", "Scotty", "Sulu"])
+    testTournament(5)
     print "14. After a 5 player tournament, player wins and matches are correct."
 
 
-def testTournament(players):
+def testTournament(player_count):
+ 
+    player_pool = []
+    for x in range(1,player_count+1):
+        player_pool.append("Player{0:03d}".format(x))
+        
     deleteMatches()
     deletePlayers()
+   
+    players = player_pool[0:player_count]
     
-    rounds_played = playTournament(players) 
+    rounds_played = simTournament(players) 
     standings = playerStandings()
     
     for i, (id, name, wins, draws, opponent_wins, matches, byes, rank) in enumerate(standings):
         if matches != rounds_played:
             raise ValueError("Each player should have %s matches recorded." % rounds_played)
-        if i == 0 and wins + draws > rounds_played:
-            raise ValueError("Each player cannot have more wins + draws than rounds played")
-        elif i == len(players) -1 and len(players) % 2 == 0 and wins != 0:
-            raise ValueError("Last place in tournament with even number of players should have no wins.")
-        elif i == len(players) -1 and len(players) % 2 != 0 and wins != 1:
-            raise ValueError("Last place in tournament with odd number of players should have 1 win.")
-        elif i > 0 and i < len(players) -1 and wins == rounds_played:
-            raise ValueError("Middle rankings should have less than %s wins." % rounds_played)
+        if byes > 1:
+            raise ValueError("A player should not have more than 1 bye.")
+        if wins + draws > rounds_played:
+            raise ValueError("Each player cannot have more wins + draws than rounds played.")
+        if i == 0 and wins + draws == 0:
+            raise ValueError("Top ranked player should at least have 1 win or draw.")
+        elif i > 0 and wins == rounds_played:
+            raise ValueError("Lower rankings should have less than %s wins." % rounds_played)
         elif i > 0 and i < len(players) -1 and wins + draws == 0:
             raise ValueError("Middle rankings should have more than 0 wins + draws.")
     
@@ -217,8 +224,8 @@ def testTournament(players):
         raise ValueError("The number of matches played in the tournament should be %s." % matches_played)
 
 
-def playTournament(players):
-    """Play a complete tournament."""
+def simTournament(players):
+    """Simulate playing a complete tournament of log2(player count) rounds."""
     for player in players:
         registerPlayer(player)
     
@@ -226,18 +233,13 @@ def playTournament(players):
     rounds = int(math.ceil(math.log(len(players),2)))
     
     for x in range(rounds):
-        playRound()
+        simRound()
     
     return rounds
    
-def playRound():
-    """Play a single round of a tournament."""
+def simRound():
+    """Simulate playing a single round of a tournament, with random match results."""
     pairings = swissPairings()
-    
-    player_count = countPlayers()
-    if len(pairings) != int(math.ceil(float(player_count)/2)):
-        raise ValueError("swissPairings() only returned %s pairings for a %s player round." % (len(pairings), player_count))
-    
     for (id1, name1, id2, name2) in pairings:
         if id1 == id2:
             # bye, so just report it
@@ -252,7 +254,7 @@ def playRound():
                 # id2 wins
                 reportMatch(id1, id2, id2)
             else:
-                # a draw
+                # draw
                 reportMatch(id1, id2)
 
 
