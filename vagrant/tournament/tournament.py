@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# 
+#
 # tournament.py -- implementation of a Swiss-system tournament
 #
 
@@ -11,8 +11,8 @@ import psycopg2
 def connect():
     """Connect to the PostgreSQL database.  Returns a database connection."""
     return psycopg2.connect("dbname=tournament")
- 
- 
+
+
 def deleteMatches():
     """Remove all the match records from the database."""
     conn = connect()
@@ -53,10 +53,10 @@ def countMatches():
 
 def registerPlayer(name):
     """Adds a player to the tournament database.
-  
+
     The database assigns a unique serial id number for the player.  (This
     should be handled by your SQL database schema, not in your Python code.)
-  
+
     Args:
       name: the player's full name (need not be unique).
     """
@@ -68,13 +68,15 @@ def registerPlayer(name):
 
 
 def playerStandings():
-    """Returns a list of the players and their win records, sorted by rank and opponent wins.
+    """Returns a list of the players and their win records.
 
-    The first entry in the list should be the player in first place, or a player
-    tied for first place if there is currently a tie.
+    The list is sorted by rank ascending and opponent match wins descending.
+    Rank is calulated as player matches - wins - draws / 2.
+    The first entry in the list should be the player in first place,
+    or a player tied for first place if there is currently a tie.
 
     Returns:
-      A list of tuples, each of which contains 
+      A list of tuples, each of which contains
         (id, name, wins, draws, played, byes, opponent_wins, rank):
         id: the player's unique id (assigned by the database)
         name: the player's full name (as registered)
@@ -89,7 +91,6 @@ def playerStandings():
     c = conn.cursor()
     sql = """SELECT id, name, wins, draws, opponent_wins, played, byes, rank
                 FROM standings ORDER BY rank, opponent_wins DESC;"""
-    
     c.execute(sql)
     standings = c.fetchall()
     conn.close()
@@ -106,19 +107,26 @@ def reportMatch(player1, player2, winner=None):
     """
     conn = connect()
     c = conn.cursor()
-    c.execute("INSERT INTO matches (player1,player2,winner) VALUES (%s,%s,%s);", (player1, player2, winner))
+    sql = "INSERT INTO matches (player1,player2,winner) VALUES (%s,%s,%s);"
+    c.execute(sql, (player1, player2, winner))
     conn.commit()
     conn.close()
 
- 
+
 def swissPairings():
     """Returns a list of pairs of players for the next round of a match.
-  
-    Assuming that there are an even number of players registered, each player
-    appears exactly once in the pairings.  Each player is paired with another
-    player with an equal or nearly-equal win record, that is, a player adjacent
-    to him or her in the standings.
-  
+
+    Each player appears in only one pairing.
+    Each player is paired with another player with an equal or nearly-equal
+    win record, that is, a player adjacent to him or her in the standings.
+    No player rematches are allowed.
+    If there is an odd number of players, the lowest ranking player,
+    that has not yet received a bye in a previous round, is given a bye.
+    The bye player is added to the pairings list as a player who plays himself.
+    If the lowest rank cannot be given a bye because it stops a complete set
+    of pairings to be made, then the next lowest rank without a previous bye
+    is attempted, and so on.
+
     Returns:
       A list of tuples, each of which contains (id1, name1, id2, name2)
         id1: the first player's unique id
@@ -126,41 +134,45 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
-    # create list for pairings
+    # Create list for pairings.
     pairs = []
-    
+
     player_count = countPlayers()
-   
-    # if odd number of players, get a list of possible bye players, from which to award a bye
+
+    # If odd number of players, get a list of possible bye players,
+    # from which to award a bye.
     if player_count % 2 != 0:
         possible_bye_players = possibleByePlayers()
 
-    # get a list of possible pairings from the possible_pairings view, and sort by rank
+    # Get a list of possible pairings from the possible_pairings view,
+    # sorted by rank.
     possible_pairs = possiblePairings()
 
-    # need to loop because 1st pairing attempt may fail when byes are involved.
-    # may need to try setting different players as the bye player to get a complete set of pairings.
+    # Need to loop because 1st pairing attempt may fail when byes are involved.
+    # May need to try setting different players as the bye player to get a
+    # complete set of pairings.
     while len(pairs) < int(math.ceil(float(player_count)/2)):
         # clear list of pairings
         del pairs[:]
-        
+ 
         # add lowest ranked possible bye player, if we have an odd number of players
         if player_count % 2 != 0:
-            bye_player = possible_bye_players.pop()
-            if bye_player:
+            if len(possible_bye_players) > 0:
+                bye_player = possible_bye_players.pop()
                 pairs.append((bye_player[0],bye_player[1],bye_player[0],bye_player[1]))
-    
+            else:
+                raise ValueError("No players are eligible for a bye.")
+
         # add pairs to list, only adding each player once
         for (id1, name1, id2, name2) in possible_pairs:
-            add_pair = True
-            for pair in pairs:
-                if id1 in (pair[0], pair[2]) or id2 in (pair[0], pair[2]):
-                    # one of the players in the pair is already paired with another player
-                    add_pair = False
-                    break
-            if add_pair:
-                pairs.append((id1, name1, id2, name2))
-        
+            if any(id1 in (p[0], p[2]) or id2 in (p[0], p[2]) for p in pairs):
+                continue
+            pairs.append((id1, name1, id2, name2))
+    
+        if (len(pairs) < int(math.ceil(float(player_count)/2))
+            and player_count % 2 == 0):
+            raise ValueError("Pairing failed.")
+           
     return pairs
 
 

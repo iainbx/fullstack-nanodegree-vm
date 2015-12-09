@@ -1,13 +1,13 @@
 -- Table definitions for the tournament project.
 
 
--- Create database
+-- Create database.
 DROP DATABASE IF EXISTS tournament;
 CREATE DATABASE tournament;
 \c tournament;
 
 
--- Create players table
+-- Create players table.
 CREATE TABLE players (
 	id serial PRIMARY KEY,
 	name text
@@ -53,7 +53,7 @@ CREATE VIEW player_matches AS
 
 
 -- Create player opponents view.
--- Ignore bye rows
+-- Ignore bye rows.
 CREATE VIEW player_opponents AS
 	SELECT players.id, players.name, 
 	CASE WHEN players.id = matches.player1 THEN matches.player2 ELSE matches.player1 END AS opponent_id

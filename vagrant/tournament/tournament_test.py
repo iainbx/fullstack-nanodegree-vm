@@ -143,6 +143,7 @@ def testByes():
             "No bye was assigned by swissPairings in 3 player tournament.")
     print "9. Bye was assigined in 3 player tournament."
 
+
 def testDraws():
     deleteMatches()
     deletePlayers()
@@ -158,6 +159,7 @@ def testDraws():
         if draws != 1:
             raise ValueError("Each player should have 1 draw recorded.")
     print "10. After reporting drawn matches, player standings shows draws."
+
 
 def testOpponentWins():
     deleteMatches()
@@ -176,32 +178,28 @@ def testOpponentWins():
     print "11. After 1 match, the player standings shows that each player has a win or an opponent win."
 
 
-def test3PlayerTournament():
-    testTournament(3)
-    print "12. After a 3 player tournament, player wins and matches are correct."
-
-
 def test4PlayerTournament():
     testTournament(4)
-    print "13. After a 4 player tournament, player wins and matches are correct."
+    print "12. After a 4 player simulated tournament, player wins and matches are correct."
 
 
 def test5PlayerTournament():
     testTournament(5)
-    print "14. After a 5 player tournament, player wins and matches are correct."
+    print "13. After a 5 player simulated tournament, player wins and matches are correct."
 
 
 def testTournament(player_count):
- 
-    player_pool = []
-    for x in range(1,player_count+1):
-        player_pool.append("Player{0:03d}".format(x))
+
+    if player_count < 2 or player_count > 999:
+        raise ValueError("Player count should be between 2 and 999")
         
     deleteMatches()
     deletePlayers()
    
-    players = player_pool[0:player_count]
+    # Create a list of player names whose length equals player_count
+    players = ["Player{0:03d}".format(x) for x in range(1,player_count+1)]
     
+    # Simulate playing a tournament
     rounds_played = simTournament(players) 
     standings = playerStandings()
     
@@ -256,6 +254,23 @@ def simRound():
             else:
                 # draw
                 reportMatch(id1, id2)
+
+
+def imFeelingLucky():
+    """Simulate playing a tournament with a random number of players
+        between 2 and 100.
+    """
+    x = randint(2,99)
+    print("Simulating a random tournament with %s players..." % x)
+    testTournament(x)
+    standings = playerStandings()
+    if standings[0][2] > standings[1][2]:
+        print("After %s matches, %s wins" % (standings[0][5], standings[0][1]))
+
+
+def justKeepTesting():
+    while True:
+        imFeelingLucky()
 
 
 if __name__ == '__main__':
