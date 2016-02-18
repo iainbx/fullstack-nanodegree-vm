@@ -1,0 +1,24 @@
+{% extends "main.html" %}
+{% block content %}
+{% include "header.html" %}
+<div class="row divider green">
+    <div class="col-md-12"></div>
+</div>
+<div class="row banner menu">
+    <div class="col-md-11 col-md-offset-1 padding-none">
+        <h1>{{ item.name }}
+			<figure class="creator">
+				<img src="{{ url_for('static', filename='blank_user.gif') }}">
+				<figcaption>Menu creator's name goes here</figcaption>
+			</figure>
+			</h1>
+
+    </div>
+</div>
+<div><img src="{{ url_for('uploads', filename=item.image) }}"/></div>
+<div>{{item.description}}</div>
+{% if 'user_id' in session %}
+<a href="{{url_for('editItem', name=item.name)}}">Edit</a> |
+<a href="{{url_for('deleteItem' , name=item.name)}}">Delete</a>
+{% endif %}
+{% endblock %}
